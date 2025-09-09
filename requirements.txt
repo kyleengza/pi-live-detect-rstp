@@ -1,0 +1,25 @@
+# Core framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+python-dotenv==1.0.1
+
+# Video & CV (headless for Lite OS)
+opencv-python-headless==4.10.0.84
+numpy==2.1.1
+
+# Tracking
+deep-sort-realtime==1.3.2
+filterpy==1.4.5
+scikit-learn==1.5.2
+
+# Data & cache
+redis==5.0.8
+
+# Utilities
+aiofiles==24.1.0
+requests==2.32.3
+
+# HailoRT Python APIs are distributed by Hailo and not available on PyPI.
+# Install HailoRT SDK separately as per Hailo documentation.
+# The code will attempt to import the Hailo modules at runtime.

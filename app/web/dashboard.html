@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pi Live Detect</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 1rem; background: #0b0e13; color: #e6edf3; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px,1fr)); gap: 16px; }
+    .card { background: #121722; border: 1px solid #1f2633; border-radius: 10px; padding: 12px; }
+    img { width: 100%; height: auto; border-radius: 8px; background: #0b0e13; }
+    h2 { margin: 0 0 8px; font-size: 16px; }
+    small { color: #9da7b3; }
+    .row { display:flex; gap:12px; align-items:center; }
+    input, button { background:#0f141c; color:#e6edf3; border:1px solid #1f2633; padding:6px 10px; border-radius:6px; }
+    button { cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="row" style="justify-content: space-between;">
+    <div>
+      <h1 style="margin:0">Pi Live Detect</h1>
+      <small>Live frames, annotated detections, cache keys.</small>
+    </div>
+    <div>
+      <button onclick="refreshAll()">Refresh</button>
+    </div>
+  </div>
+  <div id="streams" class="grid" style="margin-top:16px"></div>
+  <div class="card" style="margin-top:16px">
+    <h2>Cache Keys</h2>
+    <pre id="keys" style="white-space: pre-wrap"></pre>
+  </div>
+
+<script>
+  async function authFetch(url) {
+    const user = prompt('username', 'admin');
+    const pass = prompt('password', 'changeme');
+    const token = btoa(`${user}:${pass}`);
+    const res = await fetch(url, { headers: { 'Authorization': `Basic ${token}` }});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res;
+  }
+
+  async function loadConfig() {
+    const r = await authFetch('/config');
+    return r.json();
+  }
+
+  async function refreshAll() {
+    try {
+      const cfg = await loadConfig();
+      const host = window.location.origin;
+      const container = document.getElementById('streams');
+      container.innerHTML = '';
+      cfg.rtsp_streams.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h2>${s.name}</h2>
+          <div class="row">
+            <div style="flex:1">
+              <small>Raw</small>
+              <img src="${host}/streams/${s.name}/frame.jpg?ts=${Date.now()}" />
+            </div>
+            <div style="flex:1">
+              <small>Annotated</small>
+              <img src="${host}/streams/${s.name}/annotated.jpg?ts=${Date.now()}" />
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      const keysRes = await authFetch('/cache/keys');
+      const keys = await keysRes.json();
+      document.getElementById('keys').innerText = JSON.stringify(keys, null, 2);
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  }
+
+  refreshAll();
+</script>
+</body>
+</html>

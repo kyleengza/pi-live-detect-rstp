@@ -1,0 +1,18 @@
+[Unit]
+Description=Pi Live FastAPI Server
+After=network-online.target redis-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/pi-live-detect-rstp
+ExecStart=/usr/bin/env sh -lc "source /home/pi/pi-live-detect-rstp/.venv/bin/activate && uvicorn app.api.server:app --host 0.0.0.0 --port 8000"
+Restart=always
+RestartSec=2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
