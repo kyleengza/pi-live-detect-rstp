@@ -21,7 +21,7 @@ Modular Python system for Raspberry Pi 5 on Raspberry Pi OS Lite (64-bit). Inges
 ```sh
 # On the Pi
 sudo apt-get update && sudo apt-get install -y git
-cd ~ && git clone https://github.com/<your-org>/pi-live-detect-rstp.git
+cd ~ && git clone https://github.com/kyleengza/pi-live-detect-rstp.git
 cd pi-live-detect-rstp
 # Optional overrides
 export RTSP_URL_1="rtsp://192.168.100.4:8554/stream"
@@ -37,6 +37,13 @@ Open http://<pi-ip>:8000 and login with admin/changeme.
   - UDP: `ffprobe -hide_banner -loglevel error -rtsp_transport udp -select_streams v:0 -show_streams -show_format "$RTSP_URL"`
 - For GStreamer MJPEG testing: `gst-launch-1.0 rtspsrc location="$RTSP_URL" protocols=tcp latency=200 ! rtpjpegdepay ! jpegdec ! fakesink`
 
+## API endpoints (Basic Auth)
+- GET `/config`
+- GET `/cache/keys`, GET `/cache/get?key=...`
+- GET `/streams/{name}/frame.jpg`, `/streams/{name}/annotated.jpg`
+- GET `/logs/{logger}`
+- GET `/probes`
+
 ## Services
 - `pi-live-api.service`: serves FastAPI
 - `pi-live-ingest@<name>.service`: read RTSP (per stream)
@@ -46,6 +53,12 @@ Use `journalctl -u pi-live-*.service -f` to tail logs.
 
 ## Hailo
 `app/infer/hailo_infer.py` loads HailoRT dynamically; implement your SDK-specific pre/post/inference for YOLOv8s.
+
+## Troubleshooting
+- If ffprobe (tcp) fails but (udp) works, your RTSP server may be MJPEG over UDP only; ingestion still works via OpenCV/FFmpeg.
+- If no frames in dashboard, check `pi-live-ingest@<name>.service` logs.
+- If Redis missing, rerun installer; it installs and configures RAM-only Redis.
+- Hailo not installed yet: pipeline runs with empty detections until SDK is present.
 
 ## Development
 Run everything in one process for quick testing:

@@ -1,18 +1,26 @@
 #!/usr/bin/env sh
 set -e
 
-# Install system dependencies
-sudo apt-get update
-sudo apt-get install -y python3-venv python3-dev redis-server ffmpeg pkg-config libatlas-base-dev libjpeg-dev libopenblas-dev rsync
+# SUDO helper (works if running as root or not)
+if command -v sudo >/dev/null 2>&1 && [ "$(id -u)" -ne 0 ]; then SUDO=sudo; else SUDO=""; fi
 
-# Create app dir under /home/pi if not there
-APP_DIR=/home/pi/pi-live-detect-rstp
+# Detect target user/home (prefer the non-root invoking user)
+RUN_USER=${SUDO_USER:-$USER}
+HOME_DIR=$(getent passwd "$RUN_USER" 2>/dev/null | cut -d: -f6)
+[ -z "$HOME_DIR" ] && HOME_DIR="$HOME"
+APP_DIR="$HOME_DIR/pi-live-detect-rstp"
+
+# Install system dependencies
+$SUDO apt-get update
+$SUDO apt-get install -y python3-venv python3-dev redis-server ffmpeg pkg-config libatlas-base-dev libjpeg-dev libopenblas-dev rsync
+
+# Create app dir under target home if not there
 if [ ! -d "$APP_DIR" ]; then
-  sudo mkdir -p "$APP_DIR"
-  sudo chown -R pi:pi "$APP_DIR"
+  $SUDO mkdir -p "$APP_DIR"
+  $SUDO chown -R "$RUN_USER":"$RUN_USER" "$APP_DIR"
 fi
 
-# Copy project files
+# Copy project files from current directory to APP_DIR
 rsync -a --delete ./ "$APP_DIR"/
 
 # Python venv
@@ -22,40 +30,52 @@ python3 -m venv .venv
 pip install --upgrade pip wheel setuptools
 pip install -r requirements.txt
 
-# Enable redis persistence off (RAM-only) by disabling RDB/AOF
-sudo sed -i 's/^save .*/save ""/g' /etc/redis/redis.conf || true
-sudo sed -i 's/^appendonly yes/appendonly no/g' /etc/redis/redis.conf || true
-sudo systemctl restart redis-server
+# Configure Redis to be RAM-only (disable RDB/AOF), if config exists
+if [ -f /etc/redis/redis.conf ]; then
+  $SUDO sed -i 's/^save .*/save ""/g' /etc/redis/redis.conf || true
+  $SUDO sed -i 's/^appendonly yes/appendonly no/g' /etc/redis/redis.conf || true
+  $SUDO systemctl restart redis-server || true
+fi
 
 # Install systemd units
-sudo cp systemd/pi-live-api.service /etc/systemd/system/
-sudo cp systemd/pi-live-ingest@.service /etc/systemd/system/
-sudo cp systemd/pi-live-pipeline@.service /etc/systemd/system/
+$SUDO cp systemd/pi-live-api.service /etc/systemd/system/
+$SUDO cp systemd/pi-live-ingest@.service /etc/systemd/system/
+$SUDO cp systemd/pi-live-pipeline@.service /etc/systemd/system/
 
-sudo systemctl daemon-reload
+# Patch units with correct user/home and venv path
+for u in /etc/systemd/system/pi-live-api.service /etc/systemd/system/pi-live-ingest@.service /etc/systemd/system/pi-live-pipeline@.service; do
+  $SUDO sed -i \
+    -e "s|^User=.*|User=$RUN_USER|" \
+    -e "s|^Group=.*|Group=$RUN_USER|" \
+    -e "s|/home/pi|$HOME_DIR|g" \
+    "$u"
+done
 
-# Enable default two streams based on config names
+$SUDO systemctl daemon-reload || true
+
+# Enable default stream(s) based on config names
 STREAM1=$(python3 - <<'PY'
 from app.core.config import CONFIG
 print(CONFIG.rtsp_streams[0].name)
 PY
 )
+# STREAM2 optional if defined
 STREAM2=$(python3 - <<'PY'
 from app.core.config import CONFIG
-print(CONFIG.rtsp_streams[1].name)
+print(CONFIG.rtsp_streams[1].name if len(CONFIG.rtsp_streams) > 1 else "")
 PY
 )
 
-sudo systemctl enable pi-live-api.service
-sudo systemctl enable pi-live-ingest@${STREAM1}.service
-sudo systemctl enable pi-live-ingest@${STREAM2}.service
-sudo systemctl enable pi-live-pipeline@${STREAM1}.service
-sudo systemctl enable pi-live-pipeline@${STREAM2}.service
+$SUDO systemctl enable pi-live-api.service || true
+$SUDO systemctl enable "pi-live-ingest@${STREAM1}.service" || true
+[ -n "$STREAM2" ] && $SUDO systemctl enable "pi-live-ingest@${STREAM2}.service" || true
+$SUDO systemctl enable "pi-live-pipeline@${STREAM1}.service" || true
+[ -n "$STREAM2" ] && $SUDO systemctl enable "pi-live-pipeline@${STREAM2}.service" || true
 
-sudo systemctl start pi-live-api.service
-sudo systemctl start pi-live-ingest@${STREAM1}.service
-sudo systemctl start pi-live-ingest@${STREAM2}.service
-sudo systemctl start pi-live-pipeline@${STREAM1}.service
-sudo systemctl start pi-live-pipeline@${STREAM2}.service
+$SUDO systemctl start pi-live-api.service || true
+$SUDO systemctl start "pi-live-ingest@${STREAM1}.service" || true
+[ -n "$STREAM2" ] && $SUDO systemctl start "pi-live-ingest@${STREAM2}.service" || true
+$SUDO systemctl start "pi-live-pipeline@${STREAM1}.service" || true
+[ -n "$STREAM2" ] && $SUDO systemctl start "pi-live-pipeline@${STREAM2}.service" || true
 
 printf "\nInstalled. API at http://<pi-ip>:8000 (Basic auth)\n"
