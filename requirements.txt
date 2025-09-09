@@ -1,9 +1,0 @@
-opencv-python
-numpy
-fastapi
-uvicorn[standard]
-loguru
-pydantic
-pydantic-settings
-pyyaml
-websockets
