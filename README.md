@@ -1,13 +1,17 @@
 # Pi Live Detect RTSP with Hailo8L
 
-Modular Python system for Raspberry Pi 5 on Raspberry Pi OS Lite (64-bit). Ingest two RTSP streams, run object detection on Hailo8L (YOLOv8s via HailoRT), track with DeepSORT, cache results in Redis, and expose a FastAPI dashboard and API. All components run as systemd services.
+Modular Python system for Raspberry Pi 5 on Raspberry Pi OS Lite (64-bit). Ingest RTSP streams, run object detection on Hailo8L (YOLOv8s via HailoRT), track with DeepSORT, cache results in Redis, and expose a FastAPI dashboard and API. All components run as systemd services.
 
 ## Features
-- Two parallel RTSP ingestors -> pipelines (Hailo+DeepSORT)
+- RTSP ingestor(s) -> pipelines (Hailo+DeepSORT)
 - Redis RAM-only cache with TTL per entry
 - FastAPI with HTTP Basic Auth, simple dashboard
 - systemd services + install/uninstall scripts
 - Syslog logging and SSH-friendly
+
+## Defaults
+- One default stream: `rtsp://192.168.100.4:8554/stream` (MJPEG). Set `RTSP_URL_1` to override. To add a 2nd stream, set `RTSP_URL_2`.
+- API Basic Auth: admin/changeme (set via `API_USER`/`API_PASS`).
 
 ## Hardware/OS
 - Raspberry Pi 5, Raspberry Pi OS Lite 64-bit
@@ -15,33 +19,40 @@ Modular Python system for Raspberry Pi 5 on Raspberry Pi OS Lite (64-bit). Inges
 
 ## Quick start on Pi
 ```sh
-# On the Pi (as user pi)
-sudo apt-get update
-sudo apt-get install -y git
-cd ~
-git clone https://github.com/<your-org>/pi-live-detect-rstp.git
+# On the Pi
+sudo apt-get update && sudo apt-get install -y git
+cd ~ && git clone https://github.com/<your-org>/pi-live-detect-rstp.git
 cd pi-live-detect-rstp
+# Optional overrides
+export RTSP_URL_1="rtsp://192.168.100.4:8554/stream"
+# export RTSP_URL_2="rtsp://..."   # only if you have a 2nd stream
 sh scripts/install.sh
 ```
 
-Then open http://<pi-ip>:8000 and login with admin/changeme (change in `app/core/config.py`).
+Open http://<pi-ip>:8000 and login with admin/changeme.
 
-## Configuration
-Edit defaults in `app/core/config.py` or set env vars RTSP_URL_1 / RTSP_URL_2 before running. Update `yolov8_hef_path` to the actual .hef path from Hailo.
+## RTSP notes
+- The default stream is MJPEG. ffprobe examples:
+  - TCP: `ffprobe -hide_banner -loglevel error -rtsp_transport tcp -select_streams v:0 -show_streams -show_format "$RTSP_URL"`
+  - UDP: `ffprobe -hide_banner -loglevel error -rtsp_transport udp -select_streams v:0 -show_streams -show_format "$RTSP_URL"`
+- For GStreamer MJPEG testing: `gst-launch-1.0 rtspsrc location="$RTSP_URL" protocols=tcp latency=200 ! rtpjpegdepay ! jpegdec ! fakesink`
 
 ## Services
 - `pi-live-api.service`: serves FastAPI
-- `pi-live-ingest@cam1.service` and `@cam2`: read RTSP
-- `pi-live-pipeline@cam1.service` and `@cam2`: Hailo + DeepSORT + annotate
+- `pi-live-ingest@<name>.service`: read RTSP (per stream)
+- `pi-live-pipeline@<name>.service`: Hailo + DeepSORT + annotate (per stream)
 
 Use `journalctl -u pi-live-*.service -f` to tail logs.
 
-## Notes on Hailo
-This repo loads HailoRT dynamically. Implement actual pre/post/infer steps in `app/infer/hailo_infer.py` with your SDK environment.
+## Hailo
+`app/infer/hailo_infer.py` loads HailoRT dynamically; implement your SDK-specific pre/post/inference for YOLOv8s.
 
 ## Development
 Run everything in one process for quick testing:
 ```sh
+python -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
+export RTSP_URL_1="rtsp://192.168.100.4:8554/stream"
 python -m app.main
 ```
 

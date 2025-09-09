@@ -31,17 +31,22 @@ class RedisConfig(BaseModel):
 class APIConfig(BaseModel):
     host: str = "0.0.0.0"
     port: int = 8000
-    username: str = Field(default="admin")
-    password: str = Field(default="changeme")
+    username: str = Field(default=os.getenv("API_USER", "admin"))
+    password: str = Field(default=os.getenv("API_PASS", "changeme"))
+
+
+def _default_streams() -> List[RTSPConfig]:
+    # Default to a single MJPEG RTSP stream known to work on the LAN.
+    url1 = os.getenv("RTSP_URL_1", "rtsp://192.168.100.4:8554/stream")
+    streams: List[RTSPConfig] = [RTSPConfig(name="cam1", url=url1)]
+    url2 = os.getenv("RTSP_URL_2")
+    if url2:
+        streams.append(RTSPConfig(name="cam2", url=url2))
+    return streams
 
 
 class AppConfig(BaseModel):
-    rtsp_streams: List[RTSPConfig] = Field(
-        default=[
-            RTSPConfig(name="cam1", url=os.getenv("RTSP_URL_1", "rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov")),
-            RTSPConfig(name="cam2", url=os.getenv("RTSP_URL_2", "rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov")),
-        ]
-    )
+    rtsp_streams: List[RTSPConfig] = Field(default_factory=_default_streams)
     hailo: HailoConfig = HailoConfig()
     redis: RedisConfig = RedisConfig()
     api: APIConfig = APIConfig()
