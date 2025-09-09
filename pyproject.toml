@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pi-live-detect-rstp"
+version = "0.1.0"
+description = "Raspberry Pi Hailo YOLO RTSP live detection pipeline"
+authors = [{name=""}]
+license = {text="MIT"}
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "opencv-python",
+  "numpy",
+  "fastapi",
+  "uvicorn[standard]",
+  "loguru",
+  "pydantic",
+  "pyyaml",
+  "websockets"
+]
+
+[project.scripts]
+pi-detect-serve = "src.pipeline.serve:app"

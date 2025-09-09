@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+.env
+
+# Models
+models/*.hef
+models/*.so
+models/*_config.json
+models/labels.txt
+
+# Snapshots
+snapshots/
+
+# Logs
+*.log
+
+# VSCode
+.vscode/
