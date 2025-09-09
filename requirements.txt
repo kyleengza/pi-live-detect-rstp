@@ -4,5 +4,6 @@ fastapi
 uvicorn[standard]
 loguru
 pydantic
+pydantic-settings
 pyyaml
 websockets

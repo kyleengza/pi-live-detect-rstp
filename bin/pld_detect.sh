@@ -2,4 +2,4 @@
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 REPO_ROOT=$(readlink -f "$SCRIPT_DIR/..")
 export RUNTIME_DB=${RUNTIME_DB:-/dev/shm/pld_runtime.db}
-. "$REPO_ROOT/venv/bin/activate" && cd "$REPO_ROOT" && exec python src/detect.py >> "$REPO_ROOT/logs/detect.log" 2>&1
+. "$REPO_ROOT/venv/bin/activate" && cd "$REPO_ROOT" && exec python -m src.pipeline.serve --host 0.0.0.0 --port 8001 >> "$REPO_ROOT/logs/detect.log" 2>&1

@@ -59,21 +59,22 @@ cat > "$BASE_DIR/bin/pld_probe.sh" <<'EOF'
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 REPO_ROOT=$(readlink -f "$SCRIPT_DIR/..")
 export RUNTIME_DB=${RUNTIME_DB:-/dev/shm/pld_runtime.db}
-. "$REPO_ROOT/venv/bin/activate" && cd "$REPO_ROOT" && exec python src/probe.py >> "$REPO_ROOT/logs/probe.log" 2>&1
+echo "$(date): Health probe check" >> "$REPO_ROOT/logs/probe.log" 2>&1
+curl -s http://localhost:8000/health >> "$REPO_ROOT/logs/probe.log" 2>&1 || echo "Service not available" >> "$REPO_ROOT/logs/probe.log" 2>&1
 EOF
 cat > "$BASE_DIR/bin/pld_detect.sh" <<'EOF'
 #!/usr/bin/env bash
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 REPO_ROOT=$(readlink -f "$SCRIPT_DIR/..")
 export RUNTIME_DB=${RUNTIME_DB:-/dev/shm/pld_runtime.db}
-. "$REPO_ROOT/venv/bin/activate" && cd "$REPO_ROOT" && exec python src/detect.py >> "$REPO_ROOT/logs/detect.log" 2>&1
+. "$REPO_ROOT/venv/bin/activate" && cd "$REPO_ROOT" && exec python -m src.pipeline.serve --host 0.0.0.0 --port 8001 >> "$REPO_ROOT/logs/detect.log" 2>&1
 EOF
 cat > "$BASE_DIR/bin/pld_restream.sh" <<'EOF'
 #!/usr/bin/env bash
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 REPO_ROOT=$(readlink -f "$SCRIPT_DIR/..")
 export RUNTIME_DB=${RUNTIME_DB:-/dev/shm/pld_runtime.db}
-. "$REPO_ROOT/venv/bin/activate" && cd "$REPO_ROOT" && exec python src/restream.py >> "$REPO_ROOT/logs/restream.log" 2>&1
+echo "$(date): Restream service placeholder - WebRTC/MJPEG served by main API" >> "$REPO_ROOT/logs/restream.log" 2>&1
 EOF
 cat > "$BASE_DIR/bin/pld_api.sh" <<'EOF'
 #!/usr/bin/env bash
@@ -81,7 +82,7 @@ SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 REPO_ROOT=$(readlink -f "$SCRIPT_DIR/..")
 export RUNTIME_DB=${RUNTIME_DB:-/dev/shm/pld_runtime.db}
 export API_TOKEN=${API_TOKEN:-changeme}
-. "$REPO_ROOT/venv/bin/activate" && cd "$REPO_ROOT" && exec uvicorn src.api_server:app --host 0.0.0.0 --port 8560 >> "$REPO_ROOT/logs/api.log" 2>&1
+. "$REPO_ROOT/venv/bin/activate" && cd "$REPO_ROOT" && exec uvicorn src.pipeline.serve:app --host 0.0.0.0 --port 8000 >> "$REPO_ROOT/logs/api.log" 2>&1
 EOF
 chmod +x "$BASE_DIR/bin"/*.sh
 

@@ -1,9 +1,12 @@
 from __future__ import annotations
-from pydantic import BaseSettings, Field
+from pydantic_settings import BaseSettings
+from pydantic import Field
 from typing import List
 import os, yaml
 
 class Settings(BaseSettings):
+    model_config = {"case_sensitive": False, "env_file": ".env", "extra": "allow"}
+    
     rtsp_urls: List[str] = Field(default_factory=list, alias="RTSP_URLS")
     frame_width: int = Field(640, alias="FRAME_WIDTH")
     frame_height: int = Field(384, alias="FRAME_HEIGHT")
@@ -11,16 +14,14 @@ class Settings(BaseSettings):
     iou_threshold: float = Field(0.45, alias="IOU_THRESHOLD")
     max_queue: int = Field(4, alias="MAX_QUEUE")
     snapshot_dir: str = Field("snapshots", alias="SNAPSHOT_DIR")
+    api_token: str = Field("changeme", alias="API_TOKEN")
+    runtime_db: str = Field("/dev/shm/pld_runtime.db", alias="RUNTIME_DB")
 
     def __init__(self, **values):
         super().__init__(**values)
         # If user provided nothing, set default primary stream
         if not self.rtsp_urls:
             self.rtsp_urls = ["rtsp://192.168.100.4:8554/stream"]
-
-    class Config:
-        case_sensitive = False
-        env_file = ".env"
 
     @classmethod
     def load(cls, yaml_path: str = "config.yaml") -> "Settings":
