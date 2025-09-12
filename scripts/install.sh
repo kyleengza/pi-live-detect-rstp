@@ -10,6 +10,16 @@ HOME_DIR=$(getent passwd "$RUN_USER" 2>/dev/null | cut -d: -f6)
 [ -z "$HOME_DIR" ] && HOME_DIR="$HOME"
 APP_DIR="$HOME_DIR/pi-live-detect-rstp"
 
+# Prompt for RTSP URLs if not set and create .env
+if [ ! -f .env ]; then
+  echo "Configuring RTSP stream URLs for detection..."
+  read -p "Enter RTSP URL for stream 1 [rtsp://192.168.100.4:8554/stream]: " RTSP_URL_1
+  RTSP_URL_1=${RTSP_URL_1:-rtsp://192.168.100.4:8554/stream}
+  read -p "Enter RTSP URL for stream 2 (optional): " RTSP_URL_2
+  echo "RTSP_URL_1=\"$RTSP_URL_1\"" > .env
+  [ -n "$RTSP_URL_2" ] && echo "RTSP_URL_2=\"$RTSP_URL_2\"" >> .env
+fi
+
 # Install system dependencies
 $SUDO apt-get update
 $SUDO apt-get install -y python3-venv python3-dev redis-server ffmpeg pkg-config libatlas-base-dev libjpeg-dev libopenblas-dev rsync
@@ -25,6 +35,7 @@ rsync -a --delete ./ "$APP_DIR"/
 
 # Python venv
 cd "$APP_DIR"
+. .env
 python3 -m venv .venv
 . .venv/bin/activate
 pip install --upgrade pip wheel setuptools
