@@ -53,29 +53,19 @@ Open http://<pi-ip>:8000 and login with admin/changeme.
 
 Use `journalctl -u pi-live-*.service -f` to tail logs.
 
-## Hailo and CPU fallback
-- `app/infer/hailo_infer.py` tries HailoRT first. If unavailable, it will:
-  - Auto-download YOLOv8n.onnx to `~/.cache/pi-live-detect-rstp/` (override via `YOLO_ONNX_PATH`).
-  - Run inference via OpenCV DNN backend on CPU. Configure with envs:
-    - `CPU_FALLBACK=0|1` (default 1)
-    - `YOLO_ONNX_URL` (custom model URL)
-    - `YOLO_ONNX_IMG` (input size, default 640)
+## Systemd units
+All systemd unit files are patched automatically by the installer to use the correct user and home directory. If you change your username or move the project, rerun the installer.
 
 ## HailoRT SDK Installation
-- The HailoRT Python APIs are NOT available via pip. You must install the official HailoRT SDK and Python bindings from Hailo's documentation (https://hailo.ai/developers/).
-- After installing the SDK, verify with: `python -c "import hailo_platform"` in your venv.
-- If HailoRT is not installed, detection will fallback to CPU ONNX (OpenCV DNN).
+- The installer will install the HailoRT SDK and Python bindings if the packages are present in the `prereq/` folder.
+- If you see `No module named 'hailo_platform'`, detection will run on CPU only.
+
+## Uninstall
+Run `sh scripts/uninstall.sh` to stop and remove all services and unit files.
 
 ## Troubleshooting
-- **HailoRT SDK not found:**
-    - Ensure you have installed the HailoRT SDK and Python bindings per Hailo's instructions.
-    - If you see `No module named 'hailo_platform'`, detection will run on CPU only.
-- **Redis issues:**
-    - Installer configures Redis for RAM-only. If Redis is missing, rerun the installer.
-- **Systemd service issues:**
-    - All services use bash for ExecStart and activate the venv. If a service fails, check logs with `journalctl -u pi-live-*.service -f`.
-- **RTSP ingest issues:**
-    - Check `pi-live-ingest@<name>.service` logs for frame errors.
+- If any service fails, check logs with `journalctl -u pi-live-*.service -f`.
+- If you change your username or home directory, rerun the installer to patch all systemd units.
 
 ## Post-Install
 - After install, verify services are running:

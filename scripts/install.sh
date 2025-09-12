@@ -29,6 +29,19 @@ fi
 $SUDO apt-get update
 $SUDO apt-get install -y python3-venv python3-dev redis-server ffmpeg pkg-config libatlas-base-dev libjpeg-dev libopenblas-dev rsync
 
+# Install HailoRT SDK and Python wheel if present in prereq
+if [ -f prereq/hailort_4.22.0_arm64.deb ]; then
+  $SUDO dpkg -i prereq/hailort_4.22.0_arm64.deb || true
+fi
+if [ -f prereq/hailort-pcie-driver_4.22.0_all.deb ]; then
+  $SUDO dpkg -i prereq/hailort-pcie-driver_4.22.0_all.deb || true
+fi
+if [ -f prereq/hailort-4.22.0-cp311-cp311-linux_aarch64.whl ]; then
+  python3 -m venv .venv
+  . .venv/bin/activate
+  pip install prereq/hailort-4.22.0-cp311-cp311-linux_aarch64.whl || true
+fi
+
 # Create app dir under target home if not there
 if [ ! -d "$APP_DIR" ]; then
   $SUDO mkdir -p "$APP_DIR"
@@ -57,17 +70,19 @@ fi
 $SUDO cp systemd/pi-live-api.service /etc/systemd/system/
 $SUDO cp systemd/pi-live-ingest@.service /etc/systemd/system/
 $SUDO cp systemd/pi-live-pipeline@.service /etc/systemd/system/
+$SUDO systemctl daemon-reload
 
-# Patch units with correct user/home and venv path
-for u in /etc/systemd/system/pi-live-api.service /etc/systemd/system/pi-live-ingest@.service /etc/systemd/system/pi-live-pipeline@.service; do
-  $SUDO sed -i \
-    -e "s|^User=.*|User=$RUN_USER|" \
-    -e "s|^Group=.*|Group=$RUN_USER|" \
-    -e "s|/home/pi|$HOME_DIR|g" \
-    "$u"
-done
+# Patch systemd units for correct user/home
+$SUDO sed -i "s|User=.*|User=$RUN_USER|g" /etc/systemd/system/pi-live-api.service
+$SUDO sed -i "s|User=.*|User=$RUN_USER|g" /etc/systemd/system/pi-live-ingest@.service
+$SUDO sed -i "s|User=.*|User=$RUN_USER|g" /etc/systemd/system/pi-live-pipeline@.service
+$SUDO sed -i "s|/home/.*/pi-live-detect-rstp/.venv/bin/activate|$APP_DIR/.venv/bin/activate|g" /etc/systemd/system/pi-live-api.service
+$SUDO sed -i "s|/home/.*/pi-live-detect-rstp/.venv/bin/activate|$APP_DIR/.venv/bin/activate|g" /etc/systemd/system/pi-live-ingest@.service
+$SUDO sed -i "s|/home/.*/pi-live-detect-rstp/.venv/bin/activate|$APP_DIR/.venv/bin/activate|g" /etc/systemd/system/pi-live-pipeline@.service
 
-$SUDO systemctl daemon-reload || true
+# Enable and start services
+$SUDO systemctl enable pi-live-api.service
+$SUDO systemctl restart pi-live-api.service
 
 # Enable default stream(s) based on config names
 STREAM1=$(python3 - <<'PY'
@@ -82,13 +97,11 @@ print(CONFIG.rtsp_streams[1].name if len(CONFIG.rtsp_streams) > 1 else "")
 PY
 )
 
-$SUDO systemctl enable pi-live-api.service || true
 $SUDO systemctl enable "pi-live-ingest@${STREAM1}.service" || true
 [ -n "$STREAM2" ] && $SUDO systemctl enable "pi-live-ingest@${STREAM2}.service" || true
 $SUDO systemctl enable "pi-live-pipeline@${STREAM1}.service" || true
 [ -n "$STREAM2" ] && $SUDO systemctl enable "pi-live-pipeline@${STREAM2}.service" || true
 
-$SUDO systemctl start pi-live-api.service || true
 $SUDO systemctl start "pi-live-ingest@${STREAM1}.service" || true
 [ -n "$STREAM2" ] && $SUDO systemctl start "pi-live-ingest@${STREAM2}.service" || true
 $SUDO systemctl start "pi-live-pipeline@${STREAM1}.service" || true

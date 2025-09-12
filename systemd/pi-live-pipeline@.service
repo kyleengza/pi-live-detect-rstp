@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=pi
+User=pitato
 Group=pi
 EnvironmentFile=-/etc/default/pi-live
 Environment=LD_LIBRARY_PATH=/opt/hailo/lib
