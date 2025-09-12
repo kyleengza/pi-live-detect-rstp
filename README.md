@@ -61,11 +61,28 @@ Use `journalctl -u pi-live-*.service -f` to tail logs.
     - `YOLO_ONNX_URL` (custom model URL)
     - `YOLO_ONNX_IMG` (input size, default 640)
 
+## HailoRT SDK Installation
+- The HailoRT Python APIs are NOT available via pip. You must install the official HailoRT SDK and Python bindings from Hailo's documentation (https://hailo.ai/developers/).
+- After installing the SDK, verify with: `python -c "import hailo_platform"` in your venv.
+- If HailoRT is not installed, detection will fallback to CPU ONNX (OpenCV DNN).
+
 ## Troubleshooting
-- If ffprobe returns 503, the camera/server is down; ingestor will auto-retry and fall back to TCP.
-- If no frames in dashboard, check `pi-live-ingest@<name>.service` logs.
-- If Redis missing, rerun installer; it installs and configures RAM-only Redis.
-- If Hailo not installed, CPU fallback should still produce boxes after first ONNX download.
+- **HailoRT SDK not found:**
+    - Ensure you have installed the HailoRT SDK and Python bindings per Hailo's instructions.
+    - If you see `No module named 'hailo_platform'`, detection will run on CPU only.
+- **Redis issues:**
+    - Installer configures Redis for RAM-only. If Redis is missing, rerun the installer.
+- **Systemd service issues:**
+    - All services use bash for ExecStart and activate the venv. If a service fails, check logs with `journalctl -u pi-live-*.service -f`.
+- **RTSP ingest issues:**
+    - Check `pi-live-ingest@<name>.service` logs for frame errors.
+
+## Post-Install
+- After install, verify services are running:
+    - `systemctl status pi-live-api.service`
+    - `systemctl status pi-live-ingest@<name>.service`
+    - `systemctl status pi-live-pipeline@<name>.service`
+- Test API at `http://<pi-ip>:8000` (admin/changeme).
 
 ## Operations Manual
 See `docs/OPERATIONS.md` for detailed architecture, configuration, install, monitoring, and troubleshooting guidance.
