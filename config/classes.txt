@@ -1,0 +1,10 @@
+person
+bicycle
+car
+motorbike
+bird
+cat
+dog
+horse
+sheep
+cow

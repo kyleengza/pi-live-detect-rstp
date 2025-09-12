@@ -1,0 +1,13 @@
+model:
+  hef_path: models/hailo/yolov5_custom.hef
+  input_size: [640, 640]
+  color_order: rgb
+  dtype: uint8
+
+nms:
+  score_thresh: 0.001
+  iou_thresh: 0.7
+  engine: cpu
+
+video:
+  source: rtsp://192.168.100.4/stream

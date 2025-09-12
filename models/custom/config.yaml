@@ -1,0 +1,4 @@
+train: /workspace/data/coco128/images/train2017
+val:   /workspace/data/coco128/images/train2017
+nc: 10
+names: ['person','bicycle','car','truck','bird','cat','dog','horse','sheep','cow']

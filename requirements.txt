@@ -8,8 +8,12 @@ python-dotenv==1.0.1
 opencv-python-headless==4.10.0.84
 numpy==2.1.1
 
+# Optional CPU fallback for detection via OpenCV DNN ONNX
+# (No extra package needed beyond OpenCV; model auto-downloads at runtime.)
+
 # Tracking
-deep-sort-realtime==1.3.2
+# deep-sort-realtime pulls torch; replaced by IOU tracker implementation. Keep for optional dev.
+# deep-sort-realtime==1.3.2
 filterpy==1.4.5
 scikit-learn==1.5.2
 
