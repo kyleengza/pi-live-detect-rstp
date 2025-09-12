@@ -24,6 +24,7 @@ YOLO_ONNX_LOCAL = Path(
 )
 YOLO_ONNX_IMG_SIZE = int(os.getenv("YOLO_ONNX_IMG", "640"))
 CPU_FALLBACK = os.getenv("CPU_FALLBACK", "1") == "1"
+ONNX_FALLBACK_PATH = "/home/pitato/Documents/vscode/pi-live-detect-rstp/models/custom/model.onnx"
 
 
 class HailoYoloV8:
@@ -63,15 +64,19 @@ class HailoYoloV8:
                 self._hef = hp.HEF(hef_path)
                 self._device = hp.Device()
                 net_groups = self._hef.get_network_groups_infos()
+                self.log.warning("Device attributes: %s", dir(self._device))
+                self.log.warning("Network groups info: %s", net_groups)
                 if not net_groups:
                     raise RuntimeError("No network groups in HEF")
                 group = net_groups[0]
-                # SDK 4.20.0: configure with just the HEF
-                self._device.configure(self._hef)
+                self.log.warning("Selected group: %s", group)
+                # SDK 4.22.0: use create_network_group
+                self._network_group = self._device.create_network_group(self._hef, group)
+                self.log.warning("Network group attributes: %s", dir(self._network_group))
                 input_infos = self._hef.get_input_vstream_infos(group)
                 output_infos = self._hef.get_output_vstream_infos(group)
-                self._input_vstreams = hp.InferVStreams(self._device, input_infos, True)
-                self._output_vstreams = hp.InferVStreams(self._device, output_infos, False)
+                self._input_vstreams = hp.InferVStreams(self._network_group, input_infos, True)
+                self._output_vstreams = hp.InferVStreams(self._network_group, output_infos, False)
                 if input_infos:
                     info0 = list(input_infos)[0]
                     shape = getattr(info0, 'shape', None)
@@ -89,6 +94,11 @@ class HailoYoloV8:
                 return
             except Exception as e:
                 self.log.warning("HailoRT init failed: %s", e)
+                try:
+                    if hasattr(self, '_device') and self._device is not None:
+                        self.log.warning("Device attributes: %s", dir(self._device))
+                except Exception as dev_e:
+                    self.log.warning("Error inspecting Device object: %s", dev_e)
         # Hailo disabled or failed -> CPU fallback (only if allowed)
         if CPU_FALLBACK:
             self._ensure_onnx()
@@ -332,17 +342,4 @@ class HailoYoloV8:
             except Exception:
                 flat = [int(i[0]) if isinstance(i, (list, tuple, np.ndarray)) else int(i) for i in idxs]
         else:
-            flat = [int(idxs)] if idxs is not None else []
-        for i in flat:
-            if i < 0 or i >= len(boxes_for_nms):
-                continue
-            x, y, w, h = boxes_for_nms[i]
-            dets.append({
-                "cls": int(class_ids[i]),
-                "conf": float(confidences[i]),
-                "x1": float(x),
-                "y1": float(y),
-                "x2": float(x + w),
-                "y2": float(y + h),
-            })
-        return dets
+            flat = [int(idxs)] if idxs is not None

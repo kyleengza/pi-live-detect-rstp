@@ -8,6 +8,7 @@ Type=simple
 User=pi
 Group=pi
 EnvironmentFile=-/etc/default/pi-live
+Environment=LD_LIBRARY_PATH=/opt/hailo/lib
 WorkingDirectory=/home/pi/pi-live-detect-rstp
 ExecStart=/usr/bin/env bash -lc 'source /home/pitato/pi-live-detect-rstp/.venv/bin/activate && python -m app.entrypoints.pipeline_service %i'
 Restart=always

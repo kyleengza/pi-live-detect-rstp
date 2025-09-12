@@ -19,6 +19,11 @@ if [ ! -f .env ]; then
   echo "RTSP_URL_1=\"$RTSP_URL_1\"" > .env
   [ -n "$RTSP_URL_2" ] && echo "RTSP_URL_2=\"$RTSP_URL_2\"" >> .env
 fi
+if [ ! -f .env ]; then
+  echo "ERROR: .env file not created. Aborting install."
+  exit 1
+fi
+. .env
 
 # Install system dependencies
 $SUDO apt-get update
