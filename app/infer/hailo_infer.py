@@ -20,11 +20,11 @@ YOLO_ONNX_DEFAULT_URL = os.getenv(
     "https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5n.onnx",
 )
 YOLO_ONNX_LOCAL = Path(
-    os.getenv("YOLO_ONNX_PATH", os.path.join(os.path.expanduser("~"), ".cache", "pi-live-detect-rstp", "yolov8n.onnx"))
+    os.getenv("YOLO_ONNX_PATH", os.path.expanduser("~/pi-live-detect-rstp/models/custom/model.onnx"))
 )
 YOLO_ONNX_IMG_SIZE = int(os.getenv("YOLO_ONNX_IMG", "640"))
 CPU_FALLBACK = os.getenv("CPU_FALLBACK", "1") == "1"
-ONNX_FALLBACK_PATH = "/home/pitato/Documents/vscode/pi-live-detect-rstp/models/custom/model.onnx"
+ONNX_FALLBACK_PATH = os.path.expanduser("~/pi-live-detect-rstp/models/custom/model.onnx")
 
 
 class HailoYoloV8:
@@ -342,4 +342,17 @@ class HailoYoloV8:
             except Exception:
                 flat = [int(i[0]) if isinstance(i, (list, tuple, np.ndarray)) else int(i) for i in idxs]
         else:
-            flat = [int(idxs)] if idxs is not None
+            flat = [int(idxs)] if idxs is not None else []
+        for i in flat:
+            if i < 0 or i >= len(boxes_for_nms):
+                continue
+            x, y, w, h = boxes_for_nms[i]
+            dets.append({
+                "cls": int(class_ids[i]),
+                "conf": float(confidences[i]),
+                "x1": float(x),
+                "y1": float(y),
+                "x2": float(x + w),
+                "y2": float(y + h),
+            })
+        return dets

@@ -77,3 +77,10 @@ Run `sh scripts/uninstall.sh` to stop and remove all services and unit files.
 ## Operations Manual
 See `docs/OPERATIONS.md` for detailed architecture, configuration, install, monitoring, and troubleshooting guidance.
 
+## Model, Config, and Label Locations
+- Models, configs, and labels are expected in:
+  - `~/pi-live-detect-rstp/models/hailo/yolov5_custom.hef` (Hailo)
+  - `~/pi-live-detect-rstp/models/custom/model.onnx` (CPU fallback)
+  - `~/pi-live-detect-rstp/config/model.yaml`, `classes.txt` (labels/config)
+- Paths are auto-detected; override with env vars if needed.
+

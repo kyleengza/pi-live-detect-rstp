@@ -15,7 +15,7 @@ class RTSPConfig(BaseModel):
 
 class HailoConfig(BaseModel):
     enabled: bool = Field(default=(os.getenv("HAILO_ENABLED", "1") == "1"))
-    yolov8_hef_path: str = Field(default=os.getenv("YOLOV8_HEF", "/opt/hailo/models/yolov8s.hef"))
+    yolov8_hef_path: str = Field(default=os.getenv("YOLOV8_HEF", os.path.expanduser("~/pi-live-detect-rstp/models/hailo/yolov5_custom.hef")))
     device_id: Optional[int] = None  # None = auto-select
     score_threshold: float = float(os.getenv("HAILO_SCORE_THRESH", 0.3))
     nms_iou_threshold: float = float(os.getenv("HAILO_NMS_IOU", 0.45))
