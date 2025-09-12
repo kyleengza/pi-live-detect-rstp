@@ -44,9 +44,9 @@ class _Track:
 
 
 class MultiObjectTracker:
-    """Lightweight IOU-based tracker that mimics DeepSORT interface used by the pipeline.
+    """Lightweight IOU-based tracker for object tracking.
 
-    - No external dependencies (no torch); suitable for constrained devices.
+    - No external dependencies (no torch, no deep-sort-realtime).
     - Greedy IoU matching; tracks expire after `max_age` missed updates.
     """
 

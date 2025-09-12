@@ -12,8 +12,7 @@ numpy==1.26.4
 # (No extra package needed beyond OpenCV; model auto-downloads at runtime.)
 
 # Tracking
-# deep-sort-realtime pulls torch; replaced by IOU tracker implementation. Keep for optional dev.
-# deep-sort-realtime==1.3.2
+# IOU tracker is default; no torch or deep-sort-realtime required.
 filterpy==1.4.5
 scikit-learn==1.5.2
 
