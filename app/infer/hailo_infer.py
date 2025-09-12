@@ -16,8 +16,8 @@ from app.core.config import HailoConfig
 # Prefer user-writable cache path by default; can be overridden via YOLO_ONNX_PATH
 YOLO_ONNX_DEFAULT_URL = os.getenv(
     "YOLO_ONNX_URL",
-    # Public Ultralytics asset (small ~6MB). License: AGPL-3.0. See README for details.
-    "https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n.onnx",
+    # Updated to valid Ultralytics ONNX asset
+    "https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5n.onnx",
 )
 YOLO_ONNX_LOCAL = Path(
     os.getenv("YOLO_ONNX_PATH", os.path.join(os.path.expanduser("~"), ".cache", "pi-live-detect-rstp", "yolov8n.onnx"))
@@ -55,37 +55,29 @@ class HailoYoloV8:
     def _init_hailo_or_cpu(self) -> None:
         if self.cfg.enabled:
             try:
-                # Prefer hailo_platform official module
                 self._hp = importlib.import_module("hailo_platform")
                 hp = self._hp
                 hef_path = self.cfg.yolov8_hef_path
                 if not hef_path or not os.path.isfile(hef_path):
                     raise FileNotFoundError(f"HEF not found at {hef_path}")
                 self._hef = hp.HEF(hef_path)
-                # Create and configure device
                 self._device = hp.Device()
-                # Use first network group
                 net_groups = self._hef.get_network_groups_infos()
                 if not net_groups:
                     raise RuntimeError("No network groups in HEF")
                 group = net_groups[0]
-                configure_params = self._hef.create_configure_params(self._device)
-                self._device.configure(self._hef, configure_params)
-                # Infer vstreams
+                # SDK 4.20.0: configure with just the HEF
+                self._device.configure(self._hef)
                 input_infos = self._hef.get_input_vstream_infos(group)
                 output_infos = self._hef.get_output_vstream_infos(group)
-                # Create vstreams (InferVStreams automatically manages params in recent SDKs)
                 self._input_vstreams = hp.InferVStreams(self._device, input_infos, True)
                 self._output_vstreams = hp.InferVStreams(self._device, output_infos, False)
-                # Determine expected input size (assume single input)
                 if input_infos:
                     info0 = list(input_infos)[0]
-                    # info0.shape usually e.g. (height, width, channels)
                     shape = getattr(info0, 'shape', None)
                     if shape and len(shape) >= 2:
                         self._hailo_input_shape = (shape[0], shape[1])
                 if not self._hailo_input_shape:
-                    # Fallback to 640x640 if not discoverable
                     self._hailo_input_shape = (640, 640)
                 self.available = True
                 self._configured = True
@@ -341,8 +333,7 @@ class HailoYoloV8:
                 flat = [int(i[0]) if isinstance(i, (list, tuple, np.ndarray)) else int(i) for i in idxs]
         else:
             flat = [int(idxs)] if idxs is not None else []
-        for i in flat[:200]:
-            i = int(i)
+        for i in flat:
             if i < 0 or i >= len(boxes_for_nms):
                 continue
             x, y, w, h = boxes_for_nms[i]
