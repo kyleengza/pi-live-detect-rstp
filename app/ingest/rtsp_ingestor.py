@@ -23,10 +23,9 @@ class RTSPIngestor(threading.Thread):
         self.reopen_tries: int = 0
 
     def open(self) -> bool:
-        # Choose transport: env-configured or adaptive
-        desired_transport = (self.cfg.transport or os.getenv(f"RTSP_TRANSPORT_{self.cfg.name.split('cam')[-1]}") or self.transport).lower()
-        if desired_transport in ("udp", "tcp"):
-            self.transport = desired_transport
+        # Force transport to TCP for reliability
+        self.transport = "tcp"
+        desired_transport = self.transport
         opts = [
             f"rtsp_transport;{self.transport}",
             "max_delay;5000000",
@@ -106,12 +105,15 @@ class RTSPIngestor(threading.Thread):
                 time.sleep(max(0.0, frame_interval - (now - last)))
             last = time.time()
 
+            self.log.info(f"RTSP frame captured: shape={frame.shape}, dtype={frame.dtype}, min={frame.min()}, max={frame.max()}")
             # Encode frame as JPEG for caching and dashboard
-            ok, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+            ok, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
             if ok:
+                self.log.info(f"RTSP frame encoded: size={len(buf.tobytes())} bytes, first 4 bytes={buf.tobytes()[:4]}")
                 # Write primary frame key and one alias (not duplicate alias of alias)
                 self.cache.push_frame(self.cfg.name, buf.tobytes())
                 self.cache.push_frame(f"frame:{self.cfg.name}", buf.tobytes())
+                self.log.info(f"RTSP frame pushed to Redis: key={self.cfg.name}, bytes={len(buf.tobytes())}")
                 self.cache.set_json(f"last_frame_meta:{self.cfg.name}", {
                     "ts": int(last),
                     "w": frame.shape[1],

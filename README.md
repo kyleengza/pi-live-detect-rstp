@@ -38,13 +38,18 @@ Open http://<pi-ip>:8000 and login with admin/changeme.
   - TCP: `ffprobe -hide_banner -loglevel error -rtsp_transport tcp -select_streams v:0 -show_streams "$RTSP_URL"`
   - UDP: `ffprobe -hide_banner -loglevel error -rtsp_transport udp -select_streams v:0 -show_streams "$RTSP_URL"`
 - For GStreamer MJPEG testing: `gst-launch-1.0 rtspsrc location="$RTSP_URL" protocols=tcp latency=200 ! rtpjpegdepay ! jpegdec ! fakesink`
+- RTSP ingest now defaults to TCP transport for reliability. If you experience frame corruption or smudging, ensure your camera is streaming with sufficient bitrate and quality.
+- JPEG encoding quality for frame capture is set to 95 for best clarity. You can adjust this in `app/ingest/rtsp_ingestor.py` if needed.
 
 ## API endpoints (Basic Auth)
-- GET `/config`
-- GET `/cache/keys`, GET `/cache/get?key=...`
-- GET `/streams/{name}/frame.jpg`, `/streams/{name}/annotated.jpg`
-- GET `/logs/{logger}`
-- GET `/probes`
+- GET `/streams/{name}/frame.jpg` (raw frame)
+- GET `/streams/{name}/annotated.jpg` (annotated frame)
+
+Example:
+```sh
+curl -u admin:changeme -o raw_cam1_api.jpg http://<pi-ip>:8000/streams/cam1/frame.jpg
+curl -u admin:changeme -o annotated_cam1_api.jpg http://<pi-ip>:8000/streams/cam1/annotated.jpg
+```
 
 ## Services
 - `pi-live-api.service`: serves FastAPI
